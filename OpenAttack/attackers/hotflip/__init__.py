@@ -76,7 +76,8 @@ class HotFlipAttacker(ClassificationAttacker):
             neighbours = self.get_neighbours(word, pos)
             for neighbour in neighbours:
                 x_new = self.tokenizer.detokenize(self.do_replace(x_orig, neighbour, counter))
-                pred_target = victim.get_pred([x_new])[0]
+                # pred_target = victim.get_pred([x_new])[0]
+                pred_target = victim.get_pred([x_new])
                 if goal.check(x_new, pred_target):
                     return x_new
         return None

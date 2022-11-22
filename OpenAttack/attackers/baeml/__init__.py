@@ -25,7 +25,7 @@ class Feature(object):
         self.sim = 0.0
         self.changes = []
 
-class BAEAttacker(ClassificationAttacker):
+class BAEMCLttacker(ClassificationAttacker):
     @property
     def TAGS(self):
         return { self.__lang_tag, Tag("get_pred", "victim"), Tag("get_prob", "victim") }
@@ -127,9 +127,8 @@ class BAEAttacker(ClassificationAttacker):
         
         orig_probs = torch.Tensor(victim.get_prob([feature.seq]))
         orig_probs = orig_probs[0].squeeze()
-        orig_probs = torch.softmax(orig_probs, -1)
-       
-        current_prob = orig_probs.max()
+        orig_probs = torch.sigmoid(orig_probs)
+        current_prob = orig_probs
 
         sub_words = ['[CLS]'] + sub_words[:max_length - 2] + ['[SEP]']
        
@@ -236,8 +235,8 @@ class BAEAttacker(ClassificationAttacker):
                 
                 temp_prob = torch.Tensor(victim.get_prob([temp_text]))[0].squeeze()
                 feature.query += 1
-                temp_prob = torch.softmax(temp_prob, -1)
-                temp_label = torch.argmax(temp_prob)
+                temp_prob = torch.sigmoid(temp_prob)
+                temp_label = temp_prob > 0.5
 
                 if goal.check(feature.final_adverse, temp_label):
                     feature.change += 1
@@ -252,8 +251,9 @@ class BAEAttacker(ClassificationAttacker):
                     feature.success = 4
                     return feature.final_adverse
                 else:
-                    label_prob = temp_prob[goal.target]
+                    label_prob = temp_prob
                     gap = current_prob - label_prob
+                    gap = torch.sum(gap)
                     if gap > most_gap:
                         most_gap = gap
                         candidate = substitute
@@ -300,19 +300,26 @@ class BAEAttacker(ClassificationAttacker):
         return masked_words
     
     def get_important_scores(self, words, tgt_model, orig_prob, orig_label, orig_probs, tokenizer, batch_size, max_length):
+        """
+        for multi-class classification problem: how to define the importance? accumulate for each label
+        """
         masked_words = self._get_masked_insert(words)
         texts = [' '.join(words) for words in masked_words]  # list of text of masked words
         leave_1_probs = torch.Tensor(tgt_model.get_prob(texts))
-        leave_1_probs = torch.softmax(leave_1_probs, -1)  #
-        leave_1_probs_argmax = torch.argmax(leave_1_probs, dim=-1)
+        leave_1_probs = torch.sigmoid(leave_1_probs)
+        leave_1_label = leave_1_probs > 0.5
 
-        import_scores = (orig_prob
-                        - leave_1_probs[:, orig_label]
-                        +
-                        (leave_1_probs_argmax != orig_label).float()
-                        * (leave_1_probs.max(dim=-1)[0] - torch.index_select(orig_probs, 0, leave_1_probs_argmax))
-                        ).data.cpu().numpy()
-
+        import_scores = orig_prob - leave_1_probs
+        import_scores = torch.abs(import_scores)
+        orig_label_tf = torch.zeros_like(torch.Tensor(orig_label)).bool()
+        orig_label_tf[abs(orig_label - 1.0) < 0.0001] = True
+        pred_result = (orig_label_tf == leave_1_label)
+        true_result = torch.zeros_like(pred_result).float()
+        false_result = torch.zeros_like(pred_result).float()
+        true_result[pred_result == True] = 1
+        false_result[pred_result == False] = 2
+        pred_result = true_result + false_result
+        import_scores = torch.sum(import_scores * pred_result, dim=1)
         return import_scores
 
     ##### TODO: make this one of the substitute unit under ./substitures #####

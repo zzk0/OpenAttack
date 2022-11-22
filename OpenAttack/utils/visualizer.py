@@ -112,7 +112,8 @@ def left_bar_print(x_orig, y_orig, x_adv, y_adv, max_len, tokenizer):
     if isinstance(y_orig, int):
         head_str = "Label: %d --> %d" % (y_orig, y_adv)
     else:
-        head_str = "Label: %d (%.2lf%%) --> %d (%.2lf%%)" % (y_orig.argmax(), y_orig.max() * 100, y_adv.argmax(), y_adv.max() * 100)
+        # head_str = "Label: %d (%.2lf%%) --> %d (%.2lf%%)" % (y_orig.argmax(), y_orig.max() * 100, y_adv.argmax(), y_adv.max() * 100)
+        head_str = "Label: {} -> {} ".format(y_orig, y_adv)
     ret.append(("\033[32m%s\033[0m" % head_str) + " " * (max_len - sent_len(head_str)))
     ret.append(" " * max_len)
     

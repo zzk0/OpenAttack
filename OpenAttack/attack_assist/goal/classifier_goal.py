@@ -1,3 +1,4 @@
+import numpy as np
 from .base import AttackGoal
 
 class ClassifierGoal(AttackGoal):
@@ -10,7 +11,9 @@ class ClassifierGoal(AttackGoal):
         return self.targeted
 
     def check(self, adversarial_sample, prediction):
+        if not isinstance(prediction, np.ndarray):
+            prediction = prediction.float().cpu().numpy()
         if self.targeted:
-            return prediction == self.target
+            return np.all(np.isclose(prediction, self.target))
         else:
-            return prediction != self.target
+            return not np.all(np.isclose(prediction, self.target))

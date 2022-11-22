@@ -30,5 +30,5 @@ class ClassificationAttacker(Attacker):
         if adversarial_sample is not None:
             y_adv = victim.get_pred([ adversarial_sample ])[0]
             if not goal.check( adversarial_sample, y_adv ):
-                raise RuntimeError("Check attacker result failed: result ([%d] %s) expect (%s%d)" % ( y_adv, adversarial_sample, "" if goal.targeted else "not ", goal.target))
+                raise RuntimeError("Check attacker result failed")  # : result ([%d] %s) expect (%s%d)" % ( y_adv, adversarial_sample, "" if goal.targeted else "not ", goal.target))
         return adversarial_sample
