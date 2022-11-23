@@ -1,4 +1,5 @@
 import os
+import torch
 import numpy as np
 
 widths = [
@@ -105,7 +106,7 @@ def levenshtein_visual(a, b):
         q -= 1
     return ret[::-1]
 
-def left_bar_print(x_orig, y_orig, x_adv, y_adv, max_len, tokenizer):
+def left_bar_print(x_orig, y_orig, x_adv, y_adv, max_len, tokenizer, golden_label=None):
     ret = []
 
     assert isinstance(y_orig, int) == isinstance(y_adv, int)
@@ -113,7 +114,9 @@ def left_bar_print(x_orig, y_orig, x_adv, y_adv, max_len, tokenizer):
         head_str = "Label: %d --> %d" % (y_orig, y_adv)
     else:
         # head_str = "Label: %d (%.2lf%%) --> %d (%.2lf%%)" % (y_orig.argmax(), y_orig.max() * 100, y_adv.argmax(), y_adv.max() * 100)
-        head_str = "Label: {} -> {} ".format(y_orig, y_adv)
+        isclose = torch.all(torch.isclose(torch.Tensor(golden_label), (torch.sigmoid(y_orig) > 0.5).float()))
+        ischange = torch.all(torch.isclose((torch.sigmoid(y_adv) > 0.5).float(), (torch.sigmoid(y_orig) > 0.5).float()))
+        head_str = "Label: {} {}, {}, {} -> {} ".format(isclose, ischange, golden_label, torch.sigmoid(y_orig) > 0.5, torch.sigmoid(y_adv) > 0.5)
     ret.append(("\033[32m%s\033[0m" % head_str) + " " * (max_len - sent_len(head_str)))
     ret.append(" " * max_len)
     
@@ -173,7 +176,7 @@ def left_bar_failed(x_orig, y_orig, max_len, tokenizer):
     ret.append(" " * max_len)
     return ret
 
-def visualizer(idx, x_orig, y_orig, x_adv, y_adv, info, stream_writer, tokenizer, key_len=25, val_len=10):
+def visualizer(idx, x_orig, y_orig, x_adv, y_adv, info, stream_writer, tokenizer, key_len=25, val_len=10, golden_label=None):
     """
     Visualization tools used in :py:class:`.DefaultAttackEval`.
     """
@@ -193,7 +196,7 @@ def visualizer(idx, x_orig, y_orig, x_adv, y_adv, info, stream_writer, tokenizer
         # Failed
         left = left_bar_failed(x_orig, y_orig, max_len, tokenizer)
     else:
-        left = left_bar_print(x_orig, y_orig, x_adv, y_adv, max_len, tokenizer)
+        left = left_bar_print(x_orig, y_orig, x_adv, y_adv, max_len, tokenizer, golden_label)
     
     if len(left) < len(right):
         delta = len(right) - len(left)

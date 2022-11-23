@@ -28,7 +28,11 @@ def make_zip_downloader(URL : str, file_list=None, resource_name = None):
         else:
             name = resource_name
         
-        with urllib.request.urlopen(remote_url) as fin:
+        import ssl
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        with urllib.request.urlopen(remote_url, context=ctx) as fin:
             CHUNK_SIZE = 4 * 1024
             total_length = int(fin.headers["content-length"])
             with open(path + ".zip", "wb") as ftmp:

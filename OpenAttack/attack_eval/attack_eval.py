@@ -182,6 +182,7 @@ class AttackEval:
 
             if TAG_Classification in self.victim.TAGS:
                 x_orig = res["data"]["x"]
+                golden_label = res["data"]["y"]
                 if res["success"]:
                     x_adv = res["result"]
                     if Tag("get_prob", "victim") in self.victim.TAGS:
@@ -225,9 +226,9 @@ class AttackEval:
                 info["Succeed"] = res["success"]
                 if visualize:
                     if progress_bar:
-                        visualizer(i + 1, x_orig, y_orig, x_adv, y_adv, info, tqdm_writer, self.tokenizer)
+                        visualizer(i + 1, x_orig, y_orig, x_adv, y_adv, info, tqdm_writer, self.tokenizer, golden_label=golden_label)
                     else:
-                        visualizer(i + 1, x_orig, y_orig, x_adv, y_adv, info, sys.stdout.write, self.tokenizer)
+                        visualizer(i + 1, x_orig, y_orig, x_adv, y_adv, info, sys.stdout.write, self.tokenizer, golden_label=golden_label)
             for kw, val in res["metrics"].items():
                 if val is None:
                     continue
